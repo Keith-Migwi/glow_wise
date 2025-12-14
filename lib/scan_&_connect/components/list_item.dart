@@ -34,21 +34,9 @@ class DeviceListItem extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(18),
-          color: isSelected ? null : Colors.grey[50],
-          gradient: isSelected
-              ? const LinearGradient(
-                  colors: [
-                    Color(0xFFECFEFF),
-                    Color(0xFFF5F3FF),
-                  ], // cyan-50 → purple-50
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                )
-              : null,
+          color: Color(0xFF1E1E1E),
           border: Border.all(
-            color: isSelected
-                ? const Color(0xFF67E8F9)
-                : Colors.transparent, // cyan-300
+            color: isSelected ? const Color(0xFF67E8F9) : Colors.transparent,
             width: 2,
           ),
           boxShadow: [
@@ -84,7 +72,7 @@ class DeviceListItem extends StatelessWidget {
                               null // trick for gradient
                           ? null
                           : Colors.transparent
-                    : Colors.white,
+                    : Color(0xFF242424),
               ),
               child: Container(
                 decoration: isSelected
@@ -100,7 +88,7 @@ class DeviceListItem extends StatelessWidget {
                 child: Center(
                   child: Icon(
                     LucideIcons.bluetooth,
-                    color: isSelected ? Colors.white : Colors.grey[400],
+                    color: isSelected ? Colors.white : Colors.grey[500],
                     size: 24,
                   ),
                 ),
@@ -114,24 +102,27 @@ class DeviceListItem extends StatelessWidget {
                 children: [
                   Text(
                     device.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+                      color: Colors.grey.shade200,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
                   Text(
                     device.id,
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
                     overflow: TextOverflow.ellipsis,
                   ),
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Text(
                       'Signal: ${getSignalStrength(device.rssi)}',
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                   ),
                 ],

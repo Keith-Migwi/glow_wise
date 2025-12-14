@@ -29,5 +29,5 @@ class MyApp extends StatelessWidget {
 
 const double headerFont = 20;
 const double bodyFont = 17;
-const double secondaryFont = 15;
+const double secondaryFont = 14;
 const double captionsFont = 13;

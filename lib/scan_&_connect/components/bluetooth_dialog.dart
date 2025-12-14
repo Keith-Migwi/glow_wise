@@ -25,7 +25,7 @@ class BluetoothDialog extends StatelessWidget {
         GestureDetector(
           onTap: onClose,
           child: Container(
-            color: Colors.black.withOpacity(0.4),
+            color: Colors.black.withValues(alpha: 0.6),
           ).animate().fade(duration: 300.ms),
         ),
 
@@ -38,7 +38,7 @@ class BluetoothDialog extends StatelessWidget {
                       width: 340,
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Color(0xFF1E1E1E),
                         borderRadius: BorderRadius.circular(28),
                         boxShadow: [
                           BoxShadow(
@@ -61,13 +61,13 @@ class BluetoothDialog extends StatelessWidget {
                                 width: 32,
                                 height: 32,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey.shade100,
+                                  color: Color(0xFF242424),
                                   borderRadius: BorderRadius.circular(50),
                                 ),
                                 child: Icon(
                                   Icons.close,
                                   size: 18,
-                                  color: Colors.grey[600],
+                                  color: Colors.grey[400],
                                 ),
                               ),
                             ),
@@ -108,7 +108,7 @@ class BluetoothDialog extends StatelessWidget {
                               Text(
                                 "Enable Bluetooth",
                                 style: TextStyle(
-                                  color: Colors.grey.shade900,
+                                  color: Colors.grey.shade100,
                                   fontSize: bodyFont,
                                   fontWeight: FontWeight.w600,
                                 ),
@@ -118,7 +118,7 @@ class BluetoothDialog extends StatelessWidget {
                                 "Bluetooth is currently disabled. Please enable it to scan for nearby LED devices.",
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: Colors.grey.shade500,
+                                  color: Colors.grey.shade400,
                                   fontSize: secondaryFont,
                                   height: 1.5,
                                 ),
@@ -179,13 +179,13 @@ class BluetoothDialog extends StatelessWidget {
                                           borderRadius: BorderRadius.circular(
                                             14,
                                           ),
-                                          color: Colors.grey.shade300,
+                                          color: Color(0xFF242424),
                                         ),
                                         child: Text(
                                           "Cancel",
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
-                                            color: Colors.grey.shade700,
+                                            color: Colors.grey.shade300,
                                             fontSize: 16,
                                             fontWeight: FontWeight.w500,
                                           ),

@@ -72,7 +72,7 @@ class _ScanButtonState extends State<ScanButton>
             padding: const EdgeInsets.symmetric(vertical: 20),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
-              color: isScanning ? Colors.grey.shade300 : null,
+              color: isScanning ? Color(0xFF242424) : null,
               gradient: isScanning
                   ? null
                   : const LinearGradient(
@@ -101,7 +101,7 @@ class _ScanButtonState extends State<ScanButton>
                       width: 22,
                       child: CircularProgressIndicator(
                         strokeWidth: 1,
-                        color: Colors.grey.shade800,
+                        color: Colors.grey.shade300,
                       ),
                     )
                   else
@@ -112,7 +112,7 @@ class _ScanButtonState extends State<ScanButton>
                     style: TextStyle(
                       fontWeight: FontWeight.w500,
                       fontSize: 16,
-                      color: isScanning ? Colors.grey.shade800 : Colors.white,
+                      color: isScanning ? Colors.grey.shade300 : Colors.white,
                     ),
                   ),
                 ],

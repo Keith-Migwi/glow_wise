@@ -1,0 +1,4 @@
+package_rename_config:
+  android:
+    app_name: "GlowWise"
+    package_name: "com.mk.glow_wise"

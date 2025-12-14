@@ -109,7 +109,7 @@ class _ScanningIndicatorState extends State<ScanningIndicator>
           )
         : const AlwaysStoppedAnimation(1.0);
 
-    final bgColor = scanning ? null : Colors.grey[200];
+    final bgColor = scanning ? null : Color(0xFF242424);
     final gradient = scanning
         ? const LinearGradient(
             colors: [Color(0xFF22D3EE), Color(0xFF8B5CF6)],
@@ -118,13 +118,7 @@ class _ScanningIndicatorState extends State<ScanningIndicator>
           )
         : null;
 
-    final ringColor1 = scanning
-        ? Colors.white.withOpacity(0.6)
-        : Colors.grey[400]!;
-    final ringColor2 = scanning
-        ? Colors.white.withOpacity(0.8)
-        : Colors.grey[500]!;
-    final innerCircleColor = scanning ? Colors.white : Colors.grey[500]!;
+    final ringColor = scanning ? Colors.white : Color(0xFF6B7280);
 
     return ScaleTransition(
       scale: scale,
@@ -146,7 +140,7 @@ class _ScanningIndicatorState extends State<ScanningIndicator>
                 height: 28,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: ringColor1, width: 2),
+                  border: Border.all(color: ringColor, width: 2),
                 ),
               ),
               // Outer ring 2
@@ -155,7 +149,7 @@ class _ScanningIndicatorState extends State<ScanningIndicator>
                 height: 20,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  border: Border.all(color: ringColor2, width: 2),
+                  border: Border.all(color: ringColor, width: 2),
                 ),
               ),
               // Inner solid circle
@@ -164,7 +158,7 @@ class _ScanningIndicatorState extends State<ScanningIndicator>
                 height: 12,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: innerCircleColor,
+                  color: ringColor,
                 ),
               ),
             ],

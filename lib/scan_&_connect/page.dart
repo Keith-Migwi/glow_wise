@@ -3,7 +3,7 @@ import 'dart:typed_data' show Uint8List;
 import 'package:android_intent_plus/android_intent.dart' show AndroidIntent;
 import 'package:flutter/cupertino.dart' show CupertinoPageRoute;
 import 'package:flutter/material.dart';
-import 'package:led/control/page.dart';
+import 'package:led/control/index.dart';
 import 'package:led/scan_&_connect/components/bluetooth_dialog.dart'
     show BluetoothDialog;
 import 'package:led/scan_&_connect/components/connection_toast.dart'
@@ -66,6 +66,21 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   bool _isScanning = false;
   String? _connectedDeviceId;
   bool _isBluetoothDialogOpen = false;
+  bool _hasNavigated = false;
+
+  late final bool _isSandboxMode;
+
+  Future<bool> _shouldUseSandbox() async {
+    // Android emulator / Bluestacks detection
+    if (Platform.isAndroid) {
+      final state = await FlutterBluePlus.adapterState.first;
+      if (state == BluetoothAdapterState.unavailable ||
+          state == BluetoothAdapterState.unknown)
+        return true;
+    }
+
+    return false;
+  }
 
   // Request permissions (Android)
   Future<bool> _requestPermissions() async {
@@ -78,6 +93,11 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
 
   // Start scanning
   Future<void> _startScan() async {
+    if (_isSandboxMode) {
+      _startSandboxScan();
+      return;
+    }
+
     if (!await _requestPermissions() && mounted) {
       ScaffoldMessenger.of(
         context,
@@ -101,7 +121,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
     _stopScan();
 
     setState(() {
-      _devices.clear();
+      _devices.removeWhere((device) => device.id != _connectedDeviceId);
       _isScanning = true;
     });
 
@@ -141,7 +161,25 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
 
   // Connect to selected device
   Future<void> _connect(DiscoveredDevice device) async {
+    if (_isSandboxMode) {
+      _connectSandbox(device);
+      return;
+    }
+
     _stopScan(); // Stop scanning when connecting
+
+    if (mounted && device.id == _connectedDeviceId) {
+      Navigator.of(context).push(
+        CupertinoPageRoute(
+          builder: (context) => ControlIndex(
+            device: _devices.firstWhere(
+              (device) => device.id == _connectedDeviceId,
+            ),
+          ),
+        ),
+      );
+      return;
+    }
 
     showConnectionToast(context, "Connecting...");
 
@@ -216,10 +254,27 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
     } else {
       _saveDevice(device);
 
-      if (mounted) {
-        Navigator.of(
-          context,
-        ).push(CupertinoPageRoute(builder: (context) => ControlPage()));
+      if (mounted && !_hasNavigated) {
+        _hasNavigated = true;
+
+        Navigator.of(context)
+            .push(
+              CupertinoPageRoute(
+                builder: (context) => ControlIndex(
+                  device: _devices.firstWhere(
+                    (device) => device.id == _connectedDeviceId,
+                  ),
+                ),
+              ),
+            )
+            .then((_) {
+              // Page popped
+              if (mounted) {
+                setState(() {
+                  _hasNavigated = false;
+                });
+              }
+            });
       }
     }
   }
@@ -298,9 +353,77 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
     });
   }
 
+  Future<void> _initMode() async {
+    _isSandboxMode = await _shouldUseSandbox();
+
+    if (!_isSandboxMode) {
+      _bluetoothStateStream();
+    }
+  }
+
+  DiscoveredDevice _fakeDevice(int index) {
+    return DiscoveredDevice(
+      id: "FAKE_LED_$index",
+      name: "GlowWise Lamp ${index + 1}",
+      rssi: -40 - index * 5,
+      serviceUuids: [Uuid.parse("0000FFE0-0000-1000-8000-00805F9B34FB")],
+      serviceData: {},
+      manufacturerData: Uint8List.fromList([66, 6]),
+    );
+  }
+
+  void _startSandboxScan() {
+    _stopScan();
+
+    setState(() {
+      _devices.clear();
+      _isScanning = true;
+    });
+
+    // Simulate scan delay
+    Future.delayed(const Duration(seconds: 2), () {
+      if (!mounted) return;
+
+      setState(() {
+        _devices.addAll(List.generate(3, _fakeDevice));
+        _isScanning = false;
+      });
+    });
+  }
+
+  void _connectSandbox(DiscoveredDevice device) {
+    showConnectionToast(context, "Connecting...");
+
+    setState(() {
+      _connectedDeviceId = device.id;
+    });
+
+    // Simulate connection delay
+    Future.delayed(const Duration(seconds: 1), () {
+      if (!mounted || _hasNavigated) return;
+
+      showConnectionToast(context, "Connected");
+
+      _hasNavigated = true;
+
+      Navigator.of(context)
+          .push(
+            CupertinoPageRoute(builder: (_) => ControlIndex(device: device)),
+          )
+          .then((_) {
+            if (mounted) {
+              setState(() {
+                _hasNavigated = false;
+                _connectedDeviceId = null;
+              });
+            }
+          });
+    });
+  }
+
   @override
   void initState() {
-    _bluetoothStateStream();
+    _initMode();
     super.initState();
   }
 
@@ -324,11 +447,11 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
       child: Stack(
         children: [
           Scaffold(
-            backgroundColor: Colors.white,
+            backgroundColor: Colors.black,
 
             appBar: AppBar(
-              backgroundColor: Colors.white,
-              surfaceTintColor: Colors.white,
+              backgroundColor: Colors.black,
+              surfaceTintColor: Colors.black,
               title: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -366,6 +489,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
                     style: TextStyle(
                       fontSize: headerFont,
                       fontWeight: FontWeight.w600,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -381,8 +505,9 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
                     Text(
                       'Connect to LED Light',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: bodyFont),
+                      style: TextStyle(fontSize: bodyFont, color: Colors.white),
                     ),
+                    const SizedBox(height: 5),
 
                     Text(
                       'Scan for nearby LED lamps and connect',
@@ -405,7 +530,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
                         fontSize: secondaryFont,
                         color: _isScanning
                             ? const Color(0xFF06B6D4)
-                            : Colors.grey.shade400,
+                            : Colors.grey.shade600,
                       ),
                     ),
 
@@ -427,18 +552,18 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w500,
-                              color: Colors.black,
+                              color: Colors.white,
                             ),
                           ),
                           const SizedBox(height: 12),
                           Expanded(
                             child: _devices.isEmpty
-                                ? const Center(
+                                ? Center(
                                     child: Text(
                                       'No devices found yet',
                                       style: TextStyle(
                                         fontSize: 14,
-                                        color: Colors.grey,
+                                        color: Colors.grey.shade600,
                                       ),
                                     ),
                                   )
