@@ -22,9 +22,9 @@ class BottomNav extends StatelessWidget {
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: Color(0xFF1E1E1E),
-        border: Border(top: BorderSide(color: Color(0xFF2A2A2A))),
+        border: Border(top: BorderSide(color: Colors.grey.shade800)),
       ),
       child: SafeArea(
         top: false,

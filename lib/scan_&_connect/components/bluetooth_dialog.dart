@@ -7,12 +7,14 @@ class BluetoothDialog extends StatelessWidget {
   final bool isOpen;
   final VoidCallback onClose;
   final VoidCallback onEnable;
+  final VoidCallback enableSandbox;
 
   const BluetoothDialog({
     super.key,
     required this.isOpen,
     required this.onClose,
     required this.onEnable,
+    required this.enableSandbox,
   });
 
   @override
@@ -183,6 +185,37 @@ class BluetoothDialog extends StatelessWidget {
                                         ),
                                         child: Text(
                                           "Cancel",
+                                          textAlign: TextAlign.center,
+                                          style: TextStyle(
+                                            color: Colors.grey.shade300,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+
+                                  /// SandBox button
+                                  const SizedBox(height: 12),
+                                  GestureDetector(
+                                    onTap: enableSandbox,
+                                    child: AnimatedScale(
+                                      scale: 1.0,
+                                      duration: 100.ms,
+                                      child: Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 14,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            14,
+                                          ),
+                                          color: Color(0xFF242424),
+                                        ),
+                                        child: Text(
+                                          "Enable Sandbox",
                                           textAlign: TextAlign.center,
                                           style: TextStyle(
                                             color: Colors.grey.shade300,

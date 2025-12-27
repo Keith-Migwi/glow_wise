@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:led/control/components/bottom_nav.dart';
+import 'package:led/control/components/contents/dashboard.dart';
 
 class ControlIndex extends StatefulWidget {
   final DiscoveredDevice device;
-  const ControlIndex({super.key, required this.device});
+  final FlutterReactiveBle ble;
+  final bool sandbox;
+  const ControlIndex({
+    super.key,
+    required this.ble,
+    required this.device,
+    this.sandbox = false,
+  });
 
   @override
   State<ControlIndex> createState() => _ControlIndexState();
@@ -15,8 +23,12 @@ class _ControlIndexState extends State<ControlIndex> {
 
   Widget _renderContent() {
     switch (_activeTab) {
-      // case 'dashboard':
-      //   return const Dashboard();
+      case 'dashboard':
+        return Dashboard(
+          sandbox: widget.sandbox,
+          ble: widget.ble,
+          device: widget.device,
+        );
       // case 'scenes':
       //   return const ScenesPageEnhanced();
       // case 'schedules':
@@ -27,7 +39,7 @@ class _ControlIndexState extends State<ControlIndex> {
       //     onDisconnect: widget.onBack,
       //   );
       default:
-        return const Scaffold();
+        return const Scaffold(backgroundColor: Colors.black);
     }
   }
 
@@ -41,8 +53,8 @@ class _ControlIndexState extends State<ControlIndex> {
             /// Header
             Container(
               padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24),
-              decoration: const BoxDecoration(
-                border: Border(bottom: BorderSide(color: Color(0xFF2A2A2A))),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: Colors.grey.shade800)),
               ),
               child: Row(
                 children: [
@@ -82,13 +94,13 @@ class _ControlIndexState extends State<ControlIndex> {
                         ),
                         const SizedBox(height: 4),
                         Row(
-                          children: const [
+                          children: [
                             SizedBox(
                               width: 8,
                               height: 8,
                               child: DecoratedBox(
                                 decoration: BoxDecoration(
-                                  color: Colors.green,
+                                  color: Colors.green.shade400,
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -98,7 +110,7 @@ class _ControlIndexState extends State<ControlIndex> {
                               'Connected',
                               style: TextStyle(
                                 fontSize: 12,
-                                color: Color(0xFF4ADE80),
+                                color: Colors.green.shade400,
                               ),
                             ),
                           ],

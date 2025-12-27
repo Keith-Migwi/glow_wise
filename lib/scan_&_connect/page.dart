@@ -68,19 +68,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
   bool _isBluetoothDialogOpen = false;
   bool _hasNavigated = false;
 
-  late final bool _isSandboxMode;
-
-  Future<bool> _shouldUseSandbox() async {
-    // Android emulator / Bluestacks detection
-    if (Platform.isAndroid) {
-      final state = await FlutterBluePlus.adapterState.first;
-      if (state == BluetoothAdapterState.unavailable ||
-          state == BluetoothAdapterState.unknown)
-        return true;
-    }
-
-    return false;
-  }
+  bool _isSandboxMode = false;
 
   // Request permissions (Android)
   Future<bool> _requestPermissions() async {
@@ -175,6 +163,8 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
             device: _devices.firstWhere(
               (device) => device.id == _connectedDeviceId,
             ),
+            sandbox: _isSandboxMode,
+            ble: _flutterReactiveBle,
           ),
         ),
       );
@@ -264,6 +254,8 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
                   device: _devices.firstWhere(
                     (device) => device.id == _connectedDeviceId,
                   ),
+                  sandbox: _isSandboxMode,
+                  ble: _flutterReactiveBle,
                 ),
               ),
             )
@@ -353,14 +345,6 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
     });
   }
 
-  Future<void> _initMode() async {
-    _isSandboxMode = await _shouldUseSandbox();
-
-    if (!_isSandboxMode) {
-      _bluetoothStateStream();
-    }
-  }
-
   DiscoveredDevice _fakeDevice(int index) {
     return DiscoveredDevice(
       id: "FAKE_LED_$index",
@@ -408,7 +392,10 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
 
       Navigator.of(context)
           .push(
-            CupertinoPageRoute(builder: (_) => ControlIndex(device: device)),
+            CupertinoPageRoute(
+              builder: (_) =>
+                  ControlIndex(device: device, ble: _flutterReactiveBle),
+            ),
           )
           .then((_) {
             if (mounted) {
@@ -423,7 +410,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
 
   @override
   void initState() {
-    _initMode();
+    _bluetoothStateStream();
     super.initState();
   }
 
@@ -497,7 +484,7 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
             ),
 
             body: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 20),
               child: Center(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.center,
@@ -597,6 +584,13 @@ class _ScanPageState extends State<ScanPage> with WidgetsBindingObserver {
             isOpen: _isBluetoothDialogOpen,
             onClose: () => setState(() => _isBluetoothDialogOpen = false),
             onEnable: _turnOnBluetooth,
+            enableSandbox: () {
+              setState(() {
+                _isSandboxMode = true;
+                _isBluetoothDialogOpen = false;
+              });
+              _startSandboxScan();
+            },
           ),
         ],
       ),

@@ -65,11 +65,9 @@ class _ScanButtonState extends State<ScanButton>
         onExit: (_) => setState(() => _scale = 1.0),
         child: Transform.scale(
           scale: _scale,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
+          child: Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 20),
+            padding: const EdgeInsets.symmetric(vertical: 25),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(18),
               color: isScanning ? Color(0xFF242424) : null,
@@ -84,9 +82,10 @@ class _ScanButtonState extends State<ScanButton>
                   ? null
                   : [
                       BoxShadow(
-                        color: const Color(0x8022D3EE),
-                        blurRadius: 12,
-                        offset: const Offset(0, 5),
+                        color: const Color(0x8022D3EE).withValues(alpha: 0.4),
+                        blurRadius: 15,
+                        spreadRadius: -1,
+                        offset: const Offset(2, 5),
                       ),
                     ],
             ),
