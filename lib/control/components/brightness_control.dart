@@ -4,11 +4,13 @@ import 'package:led/control/components/slider_thumb.dart';
 class BrightnessControl extends StatefulWidget {
   final double initialBrightness;
   final ValueChanged<double>? onChanged;
+  final bool isOn;
 
   const BrightnessControl({
     super.key,
     this.initialBrightness = 50,
     this.onChanged,
+    required this.isOn,
   });
 
   @override
@@ -17,6 +19,8 @@ class BrightnessControl extends StatefulWidget {
 
 class _BrightnessControlState extends State<BrightnessControl> {
   late double _brightness;
+
+  bool get enabled => widget.isOn;
 
   @override
   void initState() {
@@ -31,7 +35,7 @@ class _BrightnessControlState extends State<BrightnessControl> {
       children: [
         // Title
         Padding(
-          padding: EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.only(bottom: 10),
           child: Text(
             'Brightness',
             style: TextStyle(
@@ -60,13 +64,17 @@ class _BrightnessControlState extends State<BrightnessControl> {
                       Icon(
                         Icons.wb_sunny_outlined,
                         size: 18,
-                        color: Colors.grey.shade500,
+                        color: enabled
+                            ? Colors.grey.shade500
+                            : Colors.grey.shade700,
                       ),
-                      SizedBox(width: 8),
+                      const SizedBox(width: 8),
                       Text(
                         'Brightness',
                         style: TextStyle(
-                          color: Colors.grey.shade400,
+                          color: enabled
+                              ? Colors.grey.shade400
+                              : Colors.grey.shade600,
                           fontSize: 14,
                         ),
                       ),
@@ -75,7 +83,9 @@ class _BrightnessControlState extends State<BrightnessControl> {
                   Text(
                     '${_brightness.toInt()}%',
                     style: TextStyle(
-                      color: Colors.grey.shade200,
+                      color: enabled
+                          ? Colors.grey.shade200
+                          : Colors.grey.shade600,
                       fontSize: 16,
                       fontWeight: FontWeight.w500,
                     ),
@@ -88,38 +98,55 @@ class _BrightnessControlState extends State<BrightnessControl> {
               // Slider
               SliderTheme(
                 data: SliderTheme.of(context).copyWith(
-                  trackHeight: 12,
+                  trackHeight: 6,
+
+                  // Thumb
                   thumbShape: GradientSliderThumbShape(
                     radius: 10,
-                    gradientColors: [Color(0xFF06B6D4), Color(0xFF9333EA)],
-                    shadows: [
-                      BoxShadow(
-                        color: Color(0xFF9333EA).withValues(alpha: 0.1),
-                        blurRadius: 5,
-                        spreadRadius: -1,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
+                    gradientColors: enabled
+                        ? const [Color(0xFF06B6D4), Color(0xFF9333EA)]
+                        : [Colors.grey.shade400, Colors.grey.shade500],
+                    shadows: enabled
+                        ? [
+                            BoxShadow(
+                              color: const Color(
+                                0xFF9333EA,
+                              ).withValues(alpha: 0.1),
+                              blurRadius: 5,
+                              spreadRadius: -1,
+                              offset: const Offset(0, 2),
+                            ),
+                          ]
+                        : [],
                   ),
+
                   overlayShape: const RoundSliderOverlayShape(
                     overlayRadius: 20,
                   ),
+
+                  disabledActiveTrackColor: Colors.grey.shade600,
+                  disabledInactiveTrackColor: Colors.grey.shade900,
+
+                  // 🔑 KEY FIX
                   activeTrackColor: const Color(0xFF22D3EE),
                   inactiveTrackColor: const Color(0xFF242424),
+
                   padding: EdgeInsets.zero,
                 ),
                 child: Slider(
                   min: 1,
                   max: 100,
                   value: _brightness,
-                  onChanged: (value) {
-                    setState(() {
-                      _brightness = value;
-                    });
-                    if (widget.onChanged != null) {
-                      widget.onChanged!(value);
-                    }
-                  },
+                  onChanged: enabled
+                      ? (value) {
+                          setState(() {
+                            _brightness = value;
+                          });
+                          if (widget.onChanged != null) {
+                            widget.onChanged!(value);
+                          }
+                        }
+                      : null,
                 ),
               ),
             ],

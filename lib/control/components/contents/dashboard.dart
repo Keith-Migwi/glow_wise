@@ -9,6 +9,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:led/control/components/power_button.dart';
 
 class Dashboard extends StatefulWidget {
+  final bool isOn;
   final DiscoveredDevice device;
   final FlutterReactiveBle ble;
   final bool sandbox;
@@ -17,6 +18,7 @@ class Dashboard extends StatefulWidget {
     required this.device,
     required this.ble,
     required this.sandbox,
+    required this.isOn,
   });
 
   @override
@@ -28,20 +30,29 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
   late AnimationController _glowFadeController;
   late Animation<double> _glowOpacity;
 
-  bool _isPoweredOn = false;
-  final Color _selectedColor = const Color(0xFF22D3EE);
+  String _selectedColor = "#FFFFFF";
 
   late QualifiedCharacteristic controlChar;
 
   Timer? _debounce;
 
-  void onSliderChanged(double value) {
+  void _onColorChanged(String hexColor) {
     // Cancel previous timer
     _debounce?.cancel();
 
     // Send brightness after short delay (50–100ms)
     _debounce = Timer(const Duration(milliseconds: 80), () {
-      setBrightness(value.toInt());
+      _setColor(hexColor);
+    });
+  }
+
+  void _onSliderChanged(double value) {
+    // Cancel previous timer
+    _debounce?.cancel();
+
+    // Send brightness after short delay (50–100ms)
+    _debounce = Timer(const Duration(milliseconds: 80), () {
+      _setBrightness(value.toInt());
     });
   }
 
@@ -80,20 +91,13 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  void _togglePower() {
-    setState(() {
-      _isPoweredOn = !_isPoweredOn;
-
-      if (_isPoweredOn) {
-        _glowFadeController.forward(from: 0);
-      } else {
-        _glowFadeController.reverse(from: 1);
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
+    if (widget.isOn) {
+      _glowFadeController.forward(from: 0);
+    } else {
+      _glowFadeController.reverse(from: 1);
+    }
     return Scaffold(
       backgroundColor: Colors.black,
       body: SingleChildScrollView(
@@ -114,9 +118,18 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                     final glow = 100 + (_pulseController.value * 50);
                     double scale = 1.0 + (_pulseController.value * 0.08);
 
-                    if (!_isPoweredOn) {
+                    if (!widget.isOn) {
                       scale = 1.0;
                     }
+
+                    HSV hsv = rgbToHsv(_selectedColor);
+
+                    final selectedColor = HSVColor.fromAHSV(
+                      1,
+                      hsv.h,
+                      hsv.s / 100,
+                      hsv.v / 100,
+                    ).toColor();
 
                     return Transform.scale(
                       scale: scale,
@@ -125,13 +138,13 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                         width: 96,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: _isPoweredOn
-                              ? _selectedColor
+                          color: widget.isOn
+                              ? selectedColor
                               : const Color(0xFF1E1E1E),
                           boxShadow: [
                             if (_glowOpacity.value > 0)
                               BoxShadow(
-                                color: _selectedColor.withValues(
+                                color: selectedColor.withValues(
                                   alpha: _glowOpacity.value,
                                 ),
                                 blurRadius: glow,
@@ -142,7 +155,7 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                         child: Icon(
                           LucideIcons.lightbulb,
                           size: 48,
-                          color: _isPoweredOn
+                          color: widget.isOn
                               ? Colors.white
                               : Colors.grey.shade600,
                         ),
@@ -152,27 +165,15 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                 ),
               ),
 
-              PowerButton(
-                isPoweredOn: _isPoweredOn,
-                onClick: () {
-                  if (_isPoweredOn) {
-                    powerOff();
-                  } else {
-                    powerOn();
-                  }
-
-                  _togglePower();
-                },
-              ),
-
-              BrightnessControl(
-                initialBrightness: 50,
-                onChanged: onSliderChanged,
-              ),
-
               ColorPicker(
-                selectedColor: "#22D3EE",
-                onColorChange: (String value) {},
+                selectedColor: _selectedColor,
+                isOn: widget.isOn,
+                onColorChange: (String value) {
+                  setState(() {
+                    _selectedColor = value;
+                  });
+                  _onColorChanged(value);
+                },
                 presetColors: [
                   "#FFFFFF",
                   "#000000",
@@ -182,6 +183,14 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
                   "#6366F1",
                 ],
               ),
+
+              BrightnessControl(
+                isOn: widget.isOn,
+                initialBrightness: 50,
+                onChanged: _onSliderChanged,
+              ),
+
+              const SizedBox(height: 100),
             ],
           ),
         ),
@@ -189,69 +198,67 @@ class _DashboardState extends State<Dashboard> with TickerProviderStateMixin {
     );
   }
 
-  Future<void> powerOn() async {
-    if (widget.sandbox) return;
+  Future<void> _setBrightness(int value) async {
+    if (!widget.sandbox) {
+      // Clamp to 1-100
+      if (value < 1) value = 1;
+      if (value > 100) value = 100;
 
-    await widget.ble.writeCharacteristicWithResponse(
-      controlChar,
-      value: Uint8List.fromList([
-        0x7B,
+      // Map 1-100% linearly to second byte (0x05 to 0x5f as example)
+      final minByte = 0x05;
+      final maxByte = 0x5F;
+      final brightnessByte =
+          (minByte + ((value - 1) / 99 * (maxByte - minByte))).round();
+
+      final data = Uint8List.fromList([
+        0x7B, // start
         0xFF,
-        0x04,
-        0x01,
-        0xFF,
-        0xFF,
+        0x01, // brightness command
+        0x1E, // fixed first byte
+        brightnessByte, // second byte = brightness
+        0x00, // third byte
         0xFF,
         0xFF,
         0xBF,
-      ]),
-    );
+      ]);
+
+      await widget.ble.writeCharacteristicWithResponse(
+        controlChar,
+        value: data,
+      );
+    }
   }
 
-  Future<void> powerOff() async {
-    if (widget.sandbox) return;
+  Future<void> _setColor(String hexColor) async {
+    if (!widget.sandbox) {
+      // Remove leading #
+      final hex = hexColor.replaceFirst('#', '');
 
-    await widget.ble.writeCharacteristicWithResponse(
-      controlChar,
-      value: Uint8List.fromList([
-        0x7B,
+      if (hex.length != 6) {
+        throw ArgumentError('Invalid color format: $hexColor');
+      }
+
+      // Parse RGB
+      final r = int.parse(hex.substring(0, 2), radix: 16);
+      final g = int.parse(hex.substring(2, 4), radix: 16);
+      final b = int.parse(hex.substring(4, 6), radix: 16);
+
+      final data = Uint8List.fromList([
+        0x7B, // start
         0xFF,
-        0x04,
-        0x00,
-        0xFF,
-        0xFF,
-        0xFF,
-        0xFF,
-        0xBF,
-      ]),
-    );
-  }
+        0x07, // color command
+        r, // red
+        g, // green
+        b, // blue
+        0xFF, // reserved
+        0xFF, // reserved
+        0xBF, // end
+      ]);
 
-  Future<void> setBrightness(int value) async {
-    if (widget.sandbox) return;
-
-    // Clamp to 1-100
-    if (value < 1) value = 1;
-    if (value > 100) value = 100;
-
-    // Map 1-100% linearly to second byte (0x05 to 0x5f as example)
-    final minByte = 0x05;
-    final maxByte = 0x5F;
-    final brightnessByte = (minByte + ((value - 1) / 99 * (maxByte - minByte)))
-        .round();
-
-    final data = Uint8List.fromList([
-      0x7B, // start
-      0xFF,
-      0x01, // brightness command
-      0x1E, // fixed first byte
-      brightnessByte, // second byte = brightness
-      0x00, // third byte
-      0xFF,
-      0xFF,
-      0xBF,
-    ]);
-
-    await widget.ble.writeCharacteristicWithResponse(controlChar, value: data);
+      await widget.ble.writeCharacteristicWithResponse(
+        controlChar,
+        value: data,
+      );
+    }
   }
 }

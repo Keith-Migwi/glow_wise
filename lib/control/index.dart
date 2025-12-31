@@ -1,7 +1,10 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_reactive_ble/flutter_reactive_ble.dart';
 import 'package:led/control/components/bottom_nav.dart';
 import 'package:led/control/components/contents/dashboard.dart';
+import 'package:led/control/components/power_button.dart';
 
 class ControlIndex extends StatefulWidget {
   final DiscoveredDevice device;
@@ -19,7 +22,21 @@ class ControlIndex extends StatefulWidget {
 }
 
 class _ControlIndexState extends State<ControlIndex> {
+  bool _isPoweredOn = false;
+  late QualifiedCharacteristic controlChar;
+
   String _activeTab = 'dashboard';
+
+  @override
+  void initState() {
+    super.initState();
+
+    controlChar = QualifiedCharacteristic(
+      deviceId: widget.device.id,
+      serviceId: Uuid.parse("FFE0"),
+      characteristicId: Uuid.parse("FFE1"),
+    );
+  }
 
   Widget _renderContent() {
     switch (_activeTab) {
@@ -28,6 +45,7 @@ class _ControlIndexState extends State<ControlIndex> {
           sandbox: widget.sandbox,
           ble: widget.ble,
           device: widget.device,
+          isOn: _isPoweredOn,
         );
       // case 'scenes':
       //   return const ScenesPageEnhanced();
@@ -78,7 +96,7 @@ class _ControlIndexState extends State<ControlIndex> {
 
                   const SizedBox(width: 16),
 
-                  /// Device Info
+                  // / Device Info
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,6 +136,20 @@ class _ControlIndexState extends State<ControlIndex> {
                       ],
                     ),
                   ),
+                  const SizedBox(width: 16),
+
+                  PowerButton(
+                    isPoweredOn: _isPoweredOn,
+                    onClick: () {
+                      if (_isPoweredOn) {
+                        _powerOff();
+                      } else {
+                        _powerOn();
+                      }
+
+                      _togglePower();
+                    },
+                  ),
                 ],
               ),
             ),
@@ -138,5 +170,49 @@ class _ControlIndexState extends State<ControlIndex> {
         ),
       ),
     );
+  }
+
+  void _togglePower() {
+    setState(() {
+      _isPoweredOn = !_isPoweredOn;
+    });
+  }
+
+  Future<void> _powerOn() async {
+    if (!widget.sandbox) {
+      await widget.ble.writeCharacteristicWithResponse(
+        controlChar,
+        value: Uint8List.fromList([
+          0x7B,
+          0xFF,
+          0x04,
+          0x01,
+          0xFF,
+          0xFF,
+          0xFF,
+          0xFF,
+          0xBF,
+        ]),
+      );
+    }
+  }
+
+  Future<void> _powerOff() async {
+    if (!widget.sandbox) {
+      await widget.ble.writeCharacteristicWithResponse(
+        controlChar,
+        value: Uint8List.fromList([
+          0x7B,
+          0xFF,
+          0x04,
+          0x00,
+          0xFF,
+          0xFF,
+          0xFF,
+          0xFF,
+          0xBF,
+        ]),
+      );
+    }
   }
 }

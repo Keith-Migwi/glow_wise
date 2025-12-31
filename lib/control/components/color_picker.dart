@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 
+import 'package:led/control/components/slider_thumb.dart';
+
 /// ====================
 /// HSV MODEL
 /// ====================
@@ -19,12 +21,14 @@ class ColorPicker extends StatefulWidget {
   final String selectedColor;
   final ValueChanged<String> onColorChange;
   final List<String> presetColors;
+  final bool isOn;
 
   const ColorPicker({
     super.key,
     required this.selectedColor,
     required this.onColorChange,
     required this.presetColors,
+    required this.isOn,
   });
 
   @override
@@ -33,6 +37,11 @@ class ColorPicker extends StatefulWidget {
 
 class _ColorPickerState extends State<ColorPicker> {
   late HSV hsv;
+
+  static const double hueSize = 192;
+  static const double svSize = 90;
+
+  bool get enabled => widget.isOn;
 
   @override
   void initState() {
@@ -52,6 +61,8 @@ class _ColorPickerState extends State<ColorPicker> {
   /// HUE UPDATE
   /// ====================
   void _updateHue(Offset localPos, Size size) {
+    if (!enabled) return;
+
     final center = size.center(Offset.zero);
     final dx = localPos.dx - center.dx;
     final dy = localPos.dy - center.dy;
@@ -71,18 +82,14 @@ class _ColorPickerState extends State<ColorPicker> {
   /// SV UPDATE
   /// ====================
   void _updateSV(Offset localPos, Size size) {
-    final width = size.width;
-    final height = size.height;
+    if (!enabled) return;
 
-    final dx = localPos.dx.clamp(0.0, width);
-    final dy = localPos.dy.clamp(0.0, height);
-
-    final s = (dx / width) * 100;
-    final v = (1 - dy / height) * 100;
+    final dx = localPos.dx.clamp(0.0, size.width);
+    final dy = localPos.dy.clamp(0.0, size.height);
 
     setState(() {
-      hsv.s = s;
-      hsv.v = v;
+      hsv.s = (dx / size.width) * 100;
+      hsv.v = (1 - dy / size.height) * 100;
     });
 
     widget.onColorChange(hsvToRgb(hsv));
@@ -90,177 +97,182 @@ class _ColorPickerState extends State<ColorPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedColor = HSVColor.fromAHSV(
-      1,
-      hsv.h,
-      hsv.s / 100,
-      hsv.v / 100,
-    ).toColor();
+    final selectedColor = enabled
+        ? HSVColor.fromAHSV(1, hsv.h, hsv.s / 100, hsv.v / 100).toColor()
+        : Colors.grey.shade500;
 
     final hueAngle = (hsv.h - 90) * pi / 180;
-    final svRadius = 112 / 2;
-    final thumbLeft = (hsv.s / 100) * 112;
-    final thumbTop = (1 - hsv.v / 100) * 112;
+
+    final thumbLeft = (hsv.s / 100) * svSize;
+    final thumbTop = (1 - hsv.v / 100) * svSize;
 
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ====================
-        // Preview Circle
-        // ====================
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            'Color',
+            style: TextStyle(
+              color: Colors.grey.shade400,
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
         Container(
-          width: 80,
-          height: 80,
+          padding: const EdgeInsets.all(25),
           decoration: BoxDecoration(
-            color: selectedColor,
-            shape: BoxShape.circle,
-            border: Border.all(color: const Color(0xFF242424), width: 4),
-            boxShadow: [
-              BoxShadow(color: selectedColor.withOpacity(0.3), blurRadius: 30),
-            ],
+            color: const Color(0xFF1E1E1E),
+            borderRadius: BorderRadius.circular(18),
           ),
-        ),
-        const SizedBox(height: 24),
-
-        // ====================
-        // Wheels
-        // ====================
-        SizedBox(
-          width: 192,
-          height: 192,
-          child: Stack(
-            alignment: Alignment.center,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Hue Wheel
-              GestureDetector(
-                onPanDown: (d) =>
-                    _updateHue(d.localPosition, const Size(192, 192)),
-                onPanUpdate: (d) =>
-                    _updateHue(d.localPosition, const Size(192, 192)),
-                child: CustomPaint(
-                  size: const Size(192, 192),
-                  painter: HueWheelPainter(),
-                ),
-              ),
-              // Hue Thumb
-              Transform.translate(
-                offset: Offset(cos(hueAngle) * 88, sin(hueAngle) * 88),
-                child: _Thumb(
-                  color: HSVColor.fromAHSV(1, hsv.h, 1, 1).toColor(),
-                ),
-              ),
-
-              // SV Wheel
               SizedBox(
-                width: 112,
-                height: 112,
-                child: GestureDetector(
-                  onPanDown: (d) =>
-                      _updateSV(d.localPosition, const Size(112, 112)),
-                  onPanUpdate: (d) =>
-                      _updateSV(d.localPosition, const Size(112, 112)),
-                  child: ClipOval(
-                    child: Stack(
-                      children: [
-                        CustomPaint(
-                          size: const Size(112, 112),
-                          painter: SVWheelPainter(hsv.h),
-                        ),
-                        // SV Thumb
-                        Positioned(
-                          left: thumbLeft.clamp(0.0, 112) - 8,
-                          top: thumbTop.clamp(0.0, 112) - 8,
-                          child: _Thumb(color: selectedColor),
-                        ),
-                      ],
+                width: hueSize,
+                height: hueSize,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    GestureDetector(
+                      onPanDown: enabled
+                          ? (d) => _updateHue(
+                              d.localPosition,
+                              const Size(hueSize, hueSize),
+                            )
+                          : null,
+                      onPanUpdate: enabled
+                          ? (d) => _updateHue(
+                              d.localPosition,
+                              const Size(hueSize, hueSize),
+                            )
+                          : null,
+                      child: CustomPaint(
+                        size: const Size(hueSize, hueSize),
+                        painter: HueWheelPainter(enabled: enabled),
+                      ),
                     ),
-                  ),
+
+                    Transform.translate(
+                      offset: Offset(cos(hueAngle) * 88, sin(hueAngle) * 88),
+                      child: _Thumb(
+                        color: enabled
+                            ? HSVColor.fromAHSV(1, hsv.h, 1, 1).toColor()
+                            : Colors.grey.shade600,
+                      ),
+                    ),
+
+                    SizedBox(
+                      width: svSize,
+                      height: svSize,
+                      child: GestureDetector(
+                        onPanDown: enabled
+                            ? (d) => _updateSV(
+                                d.localPosition,
+                                const Size(svSize, svSize),
+                              )
+                            : null,
+                        onPanUpdate: enabled
+                            ? (d) => _updateSV(
+                                d.localPosition,
+                                const Size(svSize, svSize),
+                              )
+                            : null,
+                        child: Stack(
+                          children: [
+                            CustomPaint(
+                              size: const Size(svSize, svSize),
+                              painter: SVSquarePainter(hsv.h, enabled: enabled),
+                            ),
+                            Positioned(
+                              left: thumbLeft.clamp(0.0, svSize) - 8,
+                              top: thumbTop.clamp(0.0, svSize) - 8,
+                              child: _Thumb(color: selectedColor),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+              ),
+
+              const SizedBox(height: 24),
+
+              _slider(
+                label: 'Hue',
+                value: hsv.h,
+                max: 360,
+                enabled: enabled,
+                gradient: enabled
+                    ? const LinearGradient(
+                        colors: [
+                          Colors.red,
+                          Colors.yellow,
+                          Colors.green,
+                          Colors.cyan,
+                          Colors.blue,
+                          Colors.purple,
+                          Colors.red,
+                        ],
+                      )
+                    : LinearGradient(
+                        colors: [Colors.grey.shade700, Colors.grey.shade500],
+                      ),
+                onChanged: enabled
+                    ? (v) {
+                        setState(() => hsv.h = v);
+                        widget.onColorChange(hsvToRgb(hsv));
+                      }
+                    : null,
+              ),
+
+              _slider(
+                label: 'Saturation',
+                value: hsv.s,
+                max: 100,
+                enabled: enabled,
+                gradient: LinearGradient(
+                  colors: enabled
+                      ? [
+                          HSVColor.fromAHSV(1, hsv.h, 0, hsv.v / 100).toColor(),
+                          HSVColor.fromAHSV(1, hsv.h, 1, hsv.v / 100).toColor(),
+                        ]
+                      : [Colors.grey.shade700, Colors.grey.shade500],
+                ),
+                onChanged: enabled
+                    ? (v) {
+                        setState(() => hsv.s = v);
+                        widget.onColorChange(hsvToRgb(hsv));
+                      }
+                    : null,
+              ),
+
+              _slider(
+                label: 'Brightness',
+                value: hsv.v,
+                max: 100,
+                enabled: enabled,
+                gradient: enabled
+                    ? LinearGradient(
+                        colors: [
+                          Colors.black,
+                          HSVColor.fromAHSV(1, hsv.h, hsv.s / 100, 1).toColor(),
+                        ],
+                      )
+                    : LinearGradient(
+                        colors: [Colors.grey.shade800, Colors.grey.shade500],
+                      ),
+                onChanged: enabled
+                    ? (v) {
+                        setState(() => hsv.v = v);
+                        widget.onColorChange(hsvToRgb(hsv));
+                      }
+                    : null,
               ),
             ],
           ),
-        ),
-        const SizedBox(height: 24),
-
-        // Sliders
-        _slider(
-          label: 'Hue',
-          value: hsv.h,
-          max: 360,
-          gradient: const LinearGradient(
-            colors: [
-              Colors.red,
-              Colors.yellow,
-              Colors.green,
-              Colors.cyan,
-              Colors.blue,
-              Colors.purple,
-              Colors.red,
-            ],
-          ),
-          onChanged: (v) {
-            setState(() => hsv.h = v);
-            widget.onColorChange(hsvToRgb(hsv));
-          },
-        ),
-        _slider(
-          label: 'Saturation',
-          value: hsv.s,
-          max: 100,
-          gradient: LinearGradient(
-            colors: [
-              HSVColor.fromAHSV(1, hsv.h, 0, hsv.v / 100).toColor(),
-              HSVColor.fromAHSV(1, hsv.h, 1, hsv.v / 100).toColor(),
-            ],
-          ),
-          onChanged: (v) {
-            setState(() => hsv.s = v);
-            widget.onColorChange(hsvToRgb(hsv));
-          },
-        ),
-        _slider(
-          label: 'Brightness',
-          value: hsv.v,
-          max: 100,
-          gradient: LinearGradient(
-            colors: [
-              HSVColor.fromAHSV(1, hsv.h, hsv.s / 100, 0).toColor(),
-              HSVColor.fromAHSV(1, hsv.h, hsv.s / 100, 1).toColor(),
-            ],
-          ),
-          onChanged: (v) {
-            setState(() => hsv.v = v);
-            widget.onColorChange(hsvToRgb(hsv));
-          },
-        ),
-        const SizedBox(height: 16),
-
-        // Presets
-        GridView.count(
-          shrinkWrap: true,
-          crossAxisCount: 6,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          physics: const NeverScrollableScrollPhysics(),
-          children: widget.presetColors.map((c) {
-            final isActive =
-                widget.selectedColor.toLowerCase() == c.toLowerCase();
-            return GestureDetector(
-              onTap: () {
-                setState(() => hsv = rgbToHsv(c));
-                widget.onColorChange(c);
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Color(int.parse(c.replaceFirst('#', '0xff'))),
-                  borderRadius: BorderRadius.circular(12),
-                  border: isActive
-                      ? Border.all(color: Colors.cyan, width: 2)
-                      : null,
-                ),
-              ),
-            );
-          }).toList(),
         ),
       ],
     );
@@ -271,25 +283,47 @@ class _ColorPickerState extends State<ColorPicker> {
     required double value,
     required double max,
     required Gradient gradient,
-    required ValueChanged<double> onChanged,
+    required bool enabled,
+    required ValueChanged<double>? onChanged,
   }) {
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: const TextStyle(color: Colors.grey)),
+            Text(label, style: TextStyle(color: Colors.grey.shade400)),
             Text(
               value.round().toString(),
-              style: const TextStyle(color: Colors.white),
+              style: TextStyle(
+                color: enabled ? Colors.white : Colors.grey.shade500,
+              ),
             ),
           ],
         ),
         SliderTheme(
           data: SliderTheme.of(context).copyWith(
             trackHeight: 6,
-            thumbColor: Colors.white,
+            // Thumb
+            thumbShape: GradientSliderThumbShape(
+              radius: 10,
+              gradientColors: enabled
+                  ? const [Color(0xFF06B6D4), Color(0xFF9333EA)]
+                  : [Colors.grey.shade400, Colors.grey.shade500],
+              shadows: enabled
+                  ? [
+                      BoxShadow(
+                        color: const Color(0xFF9333EA).withValues(alpha: 0.1),
+                        blurRadius: 5,
+                        spreadRadius: -1,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : [],
+            ),
+
+            thumbColor: enabled ? Colors.white : Colors.grey.shade600,
             trackShape: GradientSliderTrackShape(gradient),
+            padding: EdgeInsets.symmetric(vertical: 5),
           ),
           child: Slider(min: 0, max: max, value: value, onChanged: onChanged),
         ),
@@ -325,6 +359,10 @@ class _Thumb extends StatelessWidget {
 /// HUE WHEEL
 /// ====================
 class HueWheelPainter extends CustomPainter {
+  final bool enabled;
+
+  HueWheelPainter({required this.enabled});
+
   @override
   void paint(Canvas canvas, Size size) {
     final center = size.center(Offset.zero);
@@ -336,7 +374,9 @@ class HueWheelPainter extends CustomPainter {
     final ringRadius = radius - paint.strokeWidth / 2;
 
     for (int i = 0; i < 360; i++) {
-      paint.color = HSVColor.fromAHSV(1, i.toDouble(), 1, 1).toColor();
+      paint.color = enabled
+          ? HSVColor.fromAHSV(1, i.toDouble(), 1, 1).toColor()
+          : Colors.grey.shade600;
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: ringRadius),
         (i - 90) * pi / 180,
@@ -358,35 +398,39 @@ class HueWheelPainter extends CustomPainter {
 }
 
 /// ====================
-/// SV WHEEL
+/// SV SQUARE
 /// ====================
-class SVWheelPainter extends CustomPainter {
+class SVSquarePainter extends CustomPainter {
   final double hue;
+  final bool enabled;
 
-  const SVWheelPainter(this.hue);
+  const SVSquarePainter(this.hue, {required this.enabled});
 
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint();
 
-    // Saturation gradient: left to right
     paint.shader = LinearGradient(
-      colors: [Colors.white, HSVColor.fromAHSV(1, hue, 1, 1).toColor()],
+      colors: enabled
+          ? [Colors.white, HSVColor.fromAHSV(1, hue, 1, 1).toColor()]
+          : [Colors.grey.shade700, Colors.grey.shade500],
     ).createShader(Offset.zero & size);
     canvas.drawRect(Offset.zero & size, paint);
 
-    // Value gradient: bottom to top, multiply to darken properly
     paint.shader = LinearGradient(
       begin: Alignment.bottomCenter,
       end: Alignment.topCenter,
-      colors: [Colors.black, Colors.transparent],
+      colors: enabled
+          ? [Colors.black, Colors.transparent]
+          : [Colors.black54, Colors.transparent],
     ).createShader(Offset.zero & size);
     paint.blendMode = BlendMode.multiply;
     canvas.drawRect(Offset.zero & size, paint);
   }
 
   @override
-  bool shouldRepaint(covariant SVWheelPainter old) => old.hue != hue;
+  bool shouldRepaint(covariant SVSquarePainter old) =>
+      old.hue != hue || old.enabled != enabled;
 }
 
 /// ====================
@@ -401,7 +445,6 @@ class GradientSliderTrackShape extends RoundedRectSliderTrackShape {
   void paint(
     PaintingContext context,
     Offset offset, {
-    double additionalActiveTrackHeight = 2,
     required Animation<double> enableAnimation,
     bool isDiscrete = false,
     bool isEnabled = false,
@@ -410,6 +453,7 @@ class GradientSliderTrackShape extends RoundedRectSliderTrackShape {
     required SliderThemeData sliderTheme,
     required TextDirection textDirection,
     required Offset thumbCenter,
+    double additionalActiveTrackHeight = 2,
   }) {
     final rect = getPreferredRect(
       parentBox: parentBox,
